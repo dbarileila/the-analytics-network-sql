@@ -1,3 +1,5 @@
+--CLASE 1
+
 --Mostrar todos los productos dentro de la categoria electro junto con todos los detalles.
 select * from product_master 
 where categoria = 'Electro';
@@ -50,3 +52,92 @@ where ean is not null;
 --y 10 de Noviembre de 2022.
 select * from order_line_sale 
 where fecha between '2022-10-01' and '2022-11-10';
+
+--CLASE 2
+--Cuales son los paises donde la empresa tiene tiendas?
+select distinct pais from store_master;
+
+--Cuantos productos por subcategoria tiene disponible para la venta?
+select count (distinct subcategoria) from product_master;
+
+--Cuales son las ordenes de venta de Argentina de mayor a $100.000?
+select orden from order_line_sale 
+where venta > 100000;
+
+--Obtener los descuentos otorgados durante Noviembre de 2022 en cada una de las monedas?
+select descuento, moneda from order_line_sale  
+where fecha between '2022-11-01' and '2022-11-30';
+
+--Obtener los impuestos pagados en Europa durante el 2022.
+select 
+	sum(impuestos) as total_impuestos_eur
+from order_line_sale ols
+where moneda = 'EUR'
+
+--En cuantas ordenes se utilizaron creditos?
+select count(orden) from order_line_sale
+where creditos is not null; 
+
+--Cual es el % de descuentos otorgados (sobre las ventas) por tienda?
+select 
+	tienda, 
+	avg (descuento)  as descuento 
+from order_line_sale 
+group by tienda; 
+
+--Cual es el inventario promedio por dia que tiene cada tienda?
+select 
+	tienda,
+	avg("final") as inventario_promedio
+from inventory 
+group by tienda;
+
+--Obtener las ventas netas y el porcentaje de descuento otorgado por producto en Argentina.
+select 
+	producto, 
+	sum(venta) as ventas_netas, 
+	avg(descuento) as descuento_otorgado 
+from order_line_sale ols 
+where moneda = 'ARS'
+group by producto; 
+
+/*Las tablas "market_count" y "super_store_count" representan dos sistemas distintos que usa empresa 
+ para contar la cantidad de gente que ingresa a tienda, uno para las tiendas de Latinoamerica y otro 
+ para Europa. Obtener en una unica tabla, las entradas a tienda de ambos sistemas.*/
+select tienda, (cast(cast(fecha as text) as date)), conteo from market_count 
+union all
+select tienda, cast (fecha as date), conteo from super_store_count; 
+
+--Cuales son los productos disponibles para la venta (activos) de la marca Phillips?
+select * from product_master 
+where is_active is true 
+and nombre like '%Phillips%'
+
+--Obtener el monto vendido por tienda y moneda y ordenarlo de mayor a menor por valor nominal.
+select 
+	tienda, 
+	sum(venta) as monto_vendido 
+from order_line_sale  
+group by tienda 
+order by sum(venta) desc;
+
+/*Cual es el precio promedio de venta de cada producto en las distintas monedas? 
+Recorda que los valores de venta, impuesto, descuentos y creditos es por el total de la linea.*/
+
+select 
+	producto,
+	moneda, 
+	avg(venta) as promedio_venta 
+from order_line_sale  
+group by producto, moneda  
+
+--Cual es la tasa de impuestos que se pago por cada orden de venta?
+select * from order_line_sale ols 
+select 
+	orden,
+	((impuestos/venta) * 100) as tasa_de_impuestos
+from order_line_sale 
+group by orden, (impuestos/venta);
+
+--CLASE 3
+
