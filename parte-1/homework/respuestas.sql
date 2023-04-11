@@ -140,4 +140,97 @@ from order_line_sale
 group by orden, (impuestos/venta);
 
 --CLASE 3
+/*1)Mostrar nombre y codigo de producto, categoria y color para todos los productos de la marca Philips y 
+  Samsung, mostrando la leyenda "Unknown" cuando no hay un color disponible */
 
+select nombre, codigo_producto, categoria, coalesce (nullif(color, ''), 'Unknown') as color
+from product_master pm 
+where nombre ilike '%PHILIPS%' 
+or nombre ilike '%SAMSUNG%'
+
+--2)Calcular las ventas brutas y los impuestos pagados por pais y provincia en la moneda correspondiente.
+select 
+	sm.pais,
+	sm.provincia, 
+	ols.moneda,
+	sum(venta) as ventas_brutas,
+	sum (impuestos) as impuestos 
+from order_line_sale ols 
+left join store_master sm 
+on ols.tienda = sm.codigo_tienda 
+group by sm.pais, sm.provincia, ols.moneda 
+
+--3)Calcular las ventas totales por subcategoria de producto para cada moneda ordenados por subcategoria y moneda.
+select 
+	pm.subcategoria, 
+	ols.moneda,
+	sum(venta) as ventas_totales
+from order_line_sale ols
+left join product_master pm 
+on ols.producto = pm.codigo_producto 
+group by pm.subcategoria, ols.moneda
+
+/*4)Calcular las unidades vendidas por subcategoria de producto y la concatenacion de pais, provincia;
+ usar guion como separador y usarla para ordernar el resultado.*/
+select 
+	pm.subcategoria, 
+	count (distinct producto) as unidades_vendidas,
+	sm.pais,
+	sm.provincia 
+from order_line_sale ols 
+left join product_master pm 
+on ols.producto = pm.codigo_producto 
+left join store_master sm 
+on ols.tienda = sm.codigo_tienda 
+group by pm.subcategoria, sm.pais, sm.provincia 
+
+/*5) Mostrar una vista donde sea vea el nombre de tienda y la cantidad de entradas de personas que hubo desde 
+la fecha de apertura para el sistema "super_store".*/
+select 
+	sm.nombre,
+	count(ssc.conteo) as cantidad_entradas_personas
+from store_master sm 
+left join super_store_count ssc 
+on sm.codigo_tienda = ssc.tienda 
+group by sm.nombre 
+
+/*6) Cual es el nivel de inventario promedio en cada mes a nivel de codigo de producto y tienda;
+  mostrar el resultado con el nombre de la tienda.*/
+select 
+	sm.nombre, 
+	i.sku, 
+	avg("final") as promedio_inventario
+from inventory i 
+left join store_master sm 
+on i.tienda = sm.codigo_tienda 
+group by sm.nombre, i.sku 
+
+/*7)Calcular la cantidad de unidades vendidas por material. Para los productos que no tengan material usar
+ 'Unknown', homogeneizar los textos si es necesario.*/
+select 
+	pm.codigo_producto,
+	coalesce (nullif (pm.material, ''), 'Unknown'),
+	count(ols.producto) as unidades_vendidas
+from order_line_sale ols
+left join product_master pm 
+on ols.producto = pm.codigo_producto 
+where material notnull 
+group by pm.codigo_producto, pm.material
+
+--9)Calcular cantidad de ventas totales de la empresa en dolares.
+select 	
+	ols.moneda,
+	sum(ols.venta) as ventas_totales
+from order_line_sale ols 
+left join monthly_average_fx_rate mafr 
+on ols.fecha = mafr.mes 
+group by ols.moneda
+
+--11)Calcular la cantidad de items distintos de cada subsubcategoria que se llevan por numero de orden.
+select 
+	ols.orden,
+	count(distinct pm.codigo_producto) as cantidad_items
+from product_master pm 
+left join order_line_sale ols 
+on pm.codigo_producto = ols.producto 
+group by ols.orden
