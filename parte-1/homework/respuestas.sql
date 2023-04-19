@@ -295,7 +295,7 @@ create table employees
 	--Catalina Garcia, 2022-03-01, Argentina, Buenos Aires, tienda 2, Representante Comercial
 	--Ana Valdez, desde 2020-02-21 hasta 2022-03-01, España, Madrid, tienda 8, Jefe Logistica
 	--Fernando Moralez, 2022-04-04, España, Valencia, tienda 9, Vendedor.
-insert into employees values (1, 'Juan', 'Perez', '01-01-2022', null, +541113869867, 'Argentina', 'Santa Fe', 2, 'Vendedor' );
+insert into stg.employees values (1, 'Juan', 'Perez', '01-01-2022', null, +541113869867, 'Argentina', 'Santa Fe', 2, 'Vendedor' );
 insert into stg.employees values (2, 'Catalina', 'Garcia', '2022-03-01', null, null, 'Argentina', 'Buenos Aires', 2, 'Representante Comercial');
 insert into stg.employees values (3, 'Ana', 'Valdez', '2020-02-21 ', '2022-03-01', null, 'España', 'Madrid', 8, 'Jefe Logistica');
 insert into stg.employees values (4, 'Fernando', 'Moralez', '2022-04-04', null, null, 'España', 'Valencia', 9, 'Vendedor');
