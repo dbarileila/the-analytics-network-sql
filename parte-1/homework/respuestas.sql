@@ -234,3 +234,78 @@ from product_master pm
 left join order_line_sale ols 
 on pm.codigo_producto = ols.producto 
 group by ols.orden
+
+--Clase 4
+/*1- Crear un backup de la tabla product_master. Utilizar un esquema llamada "bkp" y agregar un prefijo al nombre de la tabla 
+ con la fecha del backup en forma de numero entero.*/
+create schema bkp;
+
+select *, current_date as backup_date 
+into bkp.product_master_bkp_19042023
+from stg.product_master pm;
+
+/*2- Hacer un update a la nueva tabla (creada en el punto anterior) de product_master agregando la leyenda "N/A" para los 
+ valores null de material y color. Pueden utilizarse dos sentencias.*/
+update bkp.product_master_bkp_19042023 set material = 'N/A' , color  = 'N/A' 
+where material = '' or color = '' 
+
+/*3- Hacer un update a la tabla del punto anterior, actualizando la columa "is_active", desactivando todos los productos 
+ en la subsubcategoria "Control Remoto". */
+update bkp.product_master_bkp set is_active = false  
+where subsubcategoria = 'Control remoto' 
+
+select * from bkp.product_master_bkp
+/*4- Agregar una nueva columna a la tabla anterior llamada "is_local" indicando los productos producidos en Argentina y 
+ fuera de Argentina. */
+alter table bkp.product_master_bkp add is_local boolean; 
+
+update bkp.product_master_bkp set is_local = true  
+where origen = 'Argentina';
+
+update bkp.product_master_bkp set is_local = false  
+where origen != 'Argentina';
+/*5- Agregar una nueva columna a la tabla de ventas llamada "line_key" que resulte ser la concatenacion de el numero de
+orden y el codigo de producto.*/
+alter table order_line_sale add line_key varchar(20);
+update order_line_sale set line_key = concat(orden, producto);  
+
+--6- Eliminar todos los valores de la tabla "order_line_sale" para el POS 1.
+update order_line_sale set pos = null 
+where pos = 1; 
+
+/*Crear una tabla llamada "employees" (por el momento vacia) que tenga un id (creado de forma incremental), nombre,
+ apellido, fecha de entrada, fecha salida, telefono, pais, provincia, codigo_tienda, posicion. 
+ Decidir cual es el tipo de dato mas acorde.*/
+create table employees
+(
+	id SERIAL PRIMARY KEY,
+	nombre varchar(20),
+	apellido varchar(20),
+	fecha_de_entrada date,
+	fecha_de_salida date,
+	telefono varchar(20),
+	pais varchar(20),
+	provincia varchar(20),
+	codigo_tienda int,
+	posicion varchar(20)
+	
+)
+--7- Insertar nuevos valores a la tabla "employees" para los siguientes 4 empleados:
+	--Juan Perez, 2022-01-01, telefono +541113869867, Argentina, Santa Fe, tienda 2, Vendedor.
+	--Catalina Garcia, 2022-03-01, Argentina, Buenos Aires, tienda 2, Representante Comercial
+	--Ana Valdez, desde 2020-02-21 hasta 2022-03-01, España, Madrid, tienda 8, Jefe Logistica
+	--Fernando Moralez, 2022-04-04, España, Valencia, tienda 9, Vendedor.
+insert into employees values (1, 'Juan', 'Perez', '01-01-2022', null, +541113869867, 'Argentina', 'Santa Fe', 2, 'Vendedor' );
+insert into stg.employees values (2, 'Catalina', 'Garcia', '2022-03-01', null, null, 'Argentina', 'Buenos Aires', 2, 'Representante Comercial');
+insert into stg.employees values (3, 'Ana', 'Valdez', '2020-02-21 ', '2022-03-01', null, 'España', 'Madrid', 8, 'Jefe Logistica');
+insert into stg.employees values (4, 'Fernando', 'Moralez', '2022-04-04', null, null, 'España', 'Valencia', 9, 'Vendedor');
+
+/* 8- Crear un backup de la tabla "cost" agregandole una columna que se llame "last_updated_ts" que sea el momento exacto 
+en el cual estemos realizando el backup en formato datetime. */
+select *, current_date as last_updated_ts
+into bkp.cost_19042023 
+from stg."cost" c;
+
+--9 -El cambio en la tabla "order_line_sale" en el punto 6 fue un error y debemos volver la tabla a su estado original, como lo harias?
+update stg.order_line_sale set pos = 1 
+where pos isnull; 
