@@ -1,0 +1,225 @@
+--KPI GENERALES
+
+--Ventas brutas: importe total de todos los ingresos por ventas sumados.
+--TOTAL DE VENTAS DE LA EMPRESA:
+select 
+	moneda, 
+	sum(venta) as venta_bruta
+from stg.order_line_sale ols 
+group by moneda 
+
+--TOTAL DE VENTAS POR FECHA:
+select
+	moneda,
+	fecha,
+	sum(venta) as venta_bruta
+from stg.order_line_sale ols 
+group by moneda, fecha 
+
+--TOTAL DE VENTAS POR PRODUCTO
+select
+	moneda,
+	producto ,
+	sum(venta) as venta_bruta
+from stg.order_line_sale ols 
+group by moneda, producto  
+
+--Ventas netas: cantidad de ingresos que obtiene una empresa después de contabilizar todas las deducciones y gastos pertinentes
+--TOTAL DE VENTAS NETAS:
+select 
+	(sum(venta) - sum (coalesce (descuento, 0)) - sum (impuestos) ) as venta_neta
+from stg.order_line_sale ols 
+
+--TOTAL DE VENTAS NETAS POR FECHA:
+select 
+	fecha,
+	moneda,
+	(sum(venta) - sum (coalesce (descuento, 0)) - sum (impuestos) ) as venta_neta
+from stg.order_line_sale ols 
+group by fecha, moneda
+
+--TOTAL DE VENTAS NETAS POR PRODUCTO:
+select 
+	producto ,
+	moneda,
+	(sum(venta) - sum (coalesce (descuento, 0)) - sum (impuestos) ) as venta_neta
+from stg.order_line_sale ols 
+group by producto, moneda  
+
+--Margen: (Venta – Coste de compra) 
+with  stg_cotizacion as (
+select
+	*,
+	case 
+		when moneda = 'ARS' then mafr.cotizacion_usd_peso 
+		when moneda = 'URU' then mafr.cotizacion_usd_uru
+		when moneda = 'EUR' then mafr.cotizacion_usd_peso
+		end as dolar	 
+ from stg.order_line_sale ols 
+ left join stg."cost" c 
+ on ols.producto  = c.codigo_producto 
+ left join stg.monthly_average_fx_rate mafr 
+ on date(date_trunc('month', ols.fecha)) = mafr.mes 
+ ),
+ stg_ventaneta as (
+	select c.producto, (sum(ols.venta/dolar) - sum (coalesce (ols.descuento/dolar, 0)) - sum (ols.impuestos/dolar) ) as venta_neta
+	from order_line_sale ols
+	inner join stg_cotizacion c on c.producto = ols.producto 
+	group by c.producto
+) 
+select
+	sg.producto,
+	vn.venta_neta - ((coalesce (sg.costo_promedio_usd, 0))* 1.0 *sg.dolar)  as margen
+from stg_cotizacion as sg
+left join stg_ventaneta as vn
+on sg.producto = vn.producto
+group by sg.producto, vn.venta_neta, sg.costo_promedio_usd, sg.dolar
+
+--ROI por categoria de producto. ROI = Valor promedio de inventario/ventas netas
+with stg_calculo_stock as (
+	select i.sku, sum(i."final") as stock from inventory i 
+	inner join order_line_sale ols on ols.producto = i.sku
+	group by i.sku 
+), cotizacion as (
+select producto,
+case
+	when moneda = 'ARS' then mafr.cotizacion_usd_peso
+	when moneda = 'URU' then mafr.cotizacion_usd_uru
+	when moneda = 'EUR' then mafr.cotizacion_usd_peso
+	end as dolar
+	from order_line_sale ols
+	left join "cost" c on ols.producto = c.codigo_producto
+	left join monthly_average_fx_rate mafr on date(date_trunc('month', ols.fecha)) = mafr.mes
+), stg_ventasnetas as (
+	select c.producto, (sum(venta/dolar) - sum (coalesce (descuento/dolar, 0)) - sum (impuestos/dolar) ) as venta_neta
+	from order_line_sale ols
+	inner join cotizacion c on c.producto = ols.producto 
+	group by c.producto
+), stg_calculo_precioproducto as (
+	select ols.producto, vn.venta_neta/sum(cantidad) as precio_producto
+	from order_line_sale ols
+	inner join stg_ventasnetas vn on vn.producto = ols.producto
+	group by ols.producto, vn.venta_neta
+), stg_calculo_promedioinventario as (
+	select ols.producto, pp.precio_producto 
+	from order_line_sale ols
+	inner join stg_calculo_precioproducto pp on pp.producto = ols.producto
+	group by ols.producto, pp.precio_producto
+)
+select * from stg_calculo_stock
+
+--AOV (Average order value), valor promedio de la orden
+select 
+  	orden,
+	((sum(venta) - sum (coalesce (descuento, 0)) - sum (impuestos) )/ 2) as valor_promedio_orden
+from order_line_sale ols 
+group by orden 
+
+--CONTABILIDAD:
+--Impuestos pagados
+
+select 
+	sum(coalesce (impuestos, 0)) as impuestos_pagados
+from order_line_sale ols 
+
+--Tasa de impuesto. Impuestos / Ventas netas
+
+select 
+	(sum(coalesce (impuestos, 0))/(sum(venta) - sum (coalesce (descuento, 0)) - sum (coalesce (impuestos, 0)))) as tasa_impuesto
+from order_line_sale ols 
+
+--Cantidad de creditos otorgados
+--Cantidad (unidades)
+select 
+	count(creditos) as cantidad_creditos
+from order_line_sale ols 
+
+--Cantidad (monetaria)
+select 
+	sum(coalesce (creditos, 0)) as cantidad_creditos
+from order_line_sale ols 
+
+--Valor pagado final por order de linea. Valor pagado: Venta - descuento + impuesto - credito
+select
+	orden,
+	sum(venta) - sum (coalesce (descuento, 0)) + sum (coalesce (impuestos,0)) - sum(coalesce (creditos, 0)) as valor_pagado
+from order_line_sale ols 
+group by orden 
+
+--SUPPLY CHAIN
+--Costo de inventario promedio por tienda
+select 
+	tienda,
+	(sum (inicial) - sum("final"))/2 as inventario_promedio
+from inventory i 
+left join store_master sm 
+on i.tienda = sm.codigo_tienda 
+group by tienda 
+
+--TIENDAS
+--Ratio de conversion. Cantidad de ordenes generadas / Cantidad de gente que entra
+--Solo la tienda 3, 4 y 9 registran ordenes 18, 20, 10 respectivamente
+with cantidad_orden as (
+select 
+	tienda,
+	count(distinct (ols.orden)) as cordenes
+from order_line_sale ols 
+group by tienda 
+),
+cantidad_gente as (
+select 
+	tienda,
+	sum(ssc.conteo) as visitas
+from super_store_count ssc 
+group by tienda
+)
+
+select 
+	co.tienda,
+	(coalesce ((co.cordenes*1.0/cg.visitas), 1)) as ratio
+from cantidad_orden as co
+left join cantidad_gente as cg
+on co.tienda = cg.tienda
+group by co.tienda, co.cordenes,cg.visitas
+
+--CREAR TABLA return_movements
+create table stg.return_movements()
+
+--PREGUNTAS DE ENTREVISTA:
+--1)Como encuentro duplicados en una tabla. Dar un ejemplo mostrando duplicados de la columna orden en la tabla de ventas.
+--Se puede encontrar duplicados de la siguiente manera, indicando en este caso la orden que se repite y cuantas veces.
+select 
+	orden, 
+	count(orden) as duplicados
+from order_line_sale ols 
+group by orden
+having count(orden) > 1
+
+--2) Como elimino duplicados?
+--Se puede utilizar row_number: ROW_NUMBER() es una función que asigna un número entero secuencial a cada fila dentro de 
+--la partición de un conjunto de resultados. El número de fila comienza con 1 para la primera fila de cada partición.
+
+--3) Cual es la diferencia entre UNION y UNION ALL.
+--UNION: combina los resultados de dos tablas y elimina los duplicados.
+--Ejemplo: 18 registros
+select codigo_producto  from product_master pm 
+union
+select producto from order_line_sale ols 
+--UNION ALL: combina las tablas y mantiene los registros duplicados.
+--Ejemplo: 19 registros
+select codigo_producto  from product_master pm 
+union all
+select producto from order_line_sale ols 
+
+--4) Como encuentro registros en una tabla que no estan en otra tabla.
+--Utilizando joins, específicamente left join o full outer join. Como vimos en clase, existe también el
+-- right join pero no suele utilizarse ya que se resuelve cambiando de lugar la tabla a consultar.
+select *
+from stg.prueba1 p 
+full outer join stg.prueba2 p2 
+on p.id = p2.id 
+
+--5) Cual es la diferencia entre INNER JOIN y LEFT JOIN. (podes usar la tabla anterior)
+--INNER JOIN: Devuelve todas las filas cuando hay al menos una coincidencia en ambas tablas. 
+--LEFT JOIN: Devuelve todas las filas de la tabla de la izquierda, y las filas coincidentes de la tabla de la derecha.
+
