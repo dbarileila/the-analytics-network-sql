@@ -108,6 +108,47 @@ case
 )
 select * from stg_calculo_stock
 
+--CLASE ROI 
+with stg_costoinventario as (
+select 
+	extract(month from i.fecha) as mes,
+	i.sku, 
+	avg((i.inicial + i."final")/2 * c1.costo_promedio_usd) as cost_usd 
+	from stg.inventory i 
+	left join stg."cost" c1
+	on c1.codigo_producto = i.sku
+	group by i.sku, extract(month from i.fecha) 
+), 
+ventas_items as (
+select 
+	producto, 
+	extract(month from ols.fecha) as mes,
+	sum(round (ols.venta/(case
+	when moneda = 'ARS' then mafr.cotizacion_usd_peso
+	when moneda = 'URU' then mafr.cotizacion_usd_uru
+	when moneda = 'EUR' then mafr.cotizacion_usd_peso
+	else 0 end),1)) as venta_bruta_usd
+from stg.order_line_sale ols
+left join stg.monthly_average_fx_rate mafr 
+	on extract(month from mafr.mes) = extract(month from ols.fecha) 
+	and extract(year from mafr.mes) = extract(year from ols.fecha) 
+	group by 1,2 
+)
+
+select 
+	coalesce(i.mes, vi.mes) as mes,
+	coalesce(i.sku, vi.producto) as producto,
+	sum(cost_usd) as cost_usd,
+	sum(venta_bruta_usd) as venta_usd,
+	sum(coalesce(venta_bruta_usd, 0))/sum(cost_usd) as ROI
+from stg_costoinventario i
+full outer join ventas_items vi
+on i.sku = vi.producto and vi.mes = i.mes
+left join stg.product_master pm 
+on coalesce (i.sku, vi.producto) = pm.codigo_producto 
+where coalesce(i.mes, vi.mes) = 11
+group by 1, 2
+
 --AOV (Average order value), valor promedio de la orden
 select 
   	orden,
