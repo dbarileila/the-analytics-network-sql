@@ -218,6 +218,28 @@ group by pm.codigo_producto, pm.material
 
 --8) Mostrar la tabla order_line_sales agregando una columna que represente el valor de venta bruta en cada linea convertido a dolares usando
 --la tabla de tipo de cambio.
+with venta_bruta_usd as (
+select 
+	producto, 
+	extract(month from ols.fecha) as mes,
+	sum(round (ols.venta/(case
+	when moneda = 'ARS' then mafr.cotizacion_usd_peso
+	when moneda = 'URU' then mafr.cotizacion_usd_uru
+	when moneda = 'EUR' then mafr.cotizacion_usd_peso
+	else 0 end),1)) as venta_bruta_usd
+from stg.order_line_sale ols
+left join stg.monthly_average_fx_rate mafr 
+	on extract(month from mafr.mes) = extract(month from ols.fecha) 
+	and extract(year from mafr.mes) = extract(year from ols.fecha) 
+	group by 1,2 
+)
+
+select 
+	*,
+	venta_bruta_usd
+from stg.order_line_sale ols 
+left join venta_bruta_usd vbu
+on ols.producto = vbu.producto
 
 --9)Calcular cantidad de ventas totales de la empresa en dolares.
 select 	
