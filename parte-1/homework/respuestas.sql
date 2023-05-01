@@ -1,98 +1,97 @@
 --CLASE 1
 
---Mostrar todos los productos dentro de la categoria electro junto con todos los detalles.
+--1) Mostrar todos los productos dentro de la categoria electro junto con todos los detalles.
 select * from product_master 
 where categoria = 'Electro';
 
---Cuales son los producto producidos en China?
+--2) Cuales son los producto producidos en China?
 select * from product_master 
 where origen = 'China';
 
---Mostrar todos los productos de Electro ordenados por nombre.
+--3) Mostrar todos los productos de Electro ordenados por nombre.
 select * from product_master 
 where categoria = 'Electro'
 order by nombre;
 
---Cuales son las TV que se encuentran activas para la venta?
+--4) Cuales son las TV que se encuentran activas para la venta?
 select * from product_master 
 where subcategoria = 'TV' and is_active is true;
 
---Mostrar todas las tiendas de Argentina ordenadas por fecha de apertura de las mas antigua a la mas nueva.
+--5) Mostrar todas las tiendas de Argentina ordenadas por fecha de apertura de las mas antigua a la mas nueva.
 select * from store_master 
 where pais = 'Argentina'
 order by fecha_apertura;
 
---Cuales fueron las ultimas 5 ordenes de ventas?
+--6) Cuales fueron las ultimas 5 ordenes de ventas?
 select * from order_line_sale 
 order by fecha desc 
 limit 5;
 
---Mostrar los primeros 10 registros de el conteo de trafico por Super store ordenados por fecha.
+--7) Mostrar los primeros 10 registros de el conteo de trafico por Super store ordenados por fecha.
 select * from super_store_count 
 order by fecha asc
 limit 10;
 
---Cuales son los producto de electro que no son Soporte de TV ni control remoto.
+--8) Cuales son los producto de electro que no son Soporte de TV ni control remoto.
 select * from product_master 
 where categoria = 'Electro' and nombre not like  '%Soporte TV%' and nombre not like '%Control Remoto%';
 
---Mostrar todas las lineas de venta donde el monto sea mayor a $100.000 solo para transacciones en pesos.
+--9) Mostrar todas las lineas de venta donde el monto sea mayor a $100.000 solo para transacciones en pesos.
 select * from order_line_sale 
 where venta > 100000 and moneda like '%ARS%';
 
---Mostrar todas las lineas de ventas de Octubre 2022.
+--10) Mostrar todas las lineas de ventas de Octubre 2022.
 select * from order_line_sale 
 where fecha between '2022-10-01' and '2022-10-30';
 
---Mostrar todos los productos que tengan EAN.
+--11) Mostrar todos los productos que tengan EAN.
 select * from product_master 
 where ean is not null;
 
---Mostrar todas las lineas de venta que que hayan sido vendidas entre 1 de Octubre de 2022 
---y 10 de Noviembre de 2022.
+--12) Mostrar todas las lineas de venta que que hayan sido vendidas entre 1 de Octubre de 2022 y 10 de Noviembre de 2022.
 select * from order_line_sale 
 where fecha between '2022-10-01' and '2022-11-10';
 
 --CLASE 2
---Cuales son los paises donde la empresa tiene tiendas?
+--1) Cuales son los paises donde la empresa tiene tiendas?
 select distinct pais from store_master;
 
---Cuantos productos por subcategoria tiene disponible para la venta?
+--2) Cuantos productos por subcategoria tiene disponible para la venta?
 select count (distinct subcategoria) from product_master;
 
---Cuales son las ordenes de venta de Argentina de mayor a $100.000?
+--3) Cuales son las ordenes de venta de Argentina de mayor a $100.000?
 select orden from order_line_sale 
 where venta > 100000;
 
---Obtener los descuentos otorgados durante Noviembre de 2022 en cada una de las monedas?
+--4) Obtener los descuentos otorgados durante Noviembre de 2022 en cada una de las monedas?
 select descuento, moneda from order_line_sale  
 where fecha between '2022-11-01' and '2022-11-30';
 
---Obtener los impuestos pagados en Europa durante el 2022.
+--5) Obtener los impuestos pagados en Europa durante el 2022.
 select 
 	sum(impuestos) as total_impuestos_eur
 from order_line_sale ols
 where moneda = 'EUR'
 
---En cuantas ordenes se utilizaron creditos?
+--6) En cuantas ordenes se utilizaron creditos?
 select count(orden) from order_line_sale
 where creditos is not null; 
 
---Cual es el % de descuentos otorgados (sobre las ventas) por tienda?
+--7) Cual es el % de descuentos otorgados (sobre las ventas) por tienda?
 select 
 	tienda, 
 	avg (descuento)  as descuento 
 from order_line_sale 
 group by tienda; 
 
---Cual es el inventario promedio por dia que tiene cada tienda?
+--8) Cual es el inventario promedio por dia que tiene cada tienda?
 select 
 	tienda,
 	avg("final") as inventario_promedio
 from inventory 
 group by tienda;
 
---Obtener las ventas netas y el porcentaje de descuento otorgado por producto en Argentina.
+--9) Obtener las ventas netas y el porcentaje de descuento otorgado por producto en Argentina.
 select 
 	producto, 
 	sum(venta) as ventas_netas, 
@@ -101,19 +100,19 @@ from order_line_sale ols
 where moneda = 'ARS'
 group by producto; 
 
-/*Las tablas "market_count" y "super_store_count" representan dos sistemas distintos que usa empresa 
+/*10) Las tablas "market_count" y "super_store_count" representan dos sistemas distintos que usa empresa 
  para contar la cantidad de gente que ingresa a tienda, uno para las tiendas de Latinoamerica y otro 
  para Europa. Obtener en una unica tabla, las entradas a tienda de ambos sistemas.*/
 select tienda, (cast(cast(fecha as text) as date)), conteo from market_count 
 union all
 select tienda, cast (fecha as date), conteo from super_store_count; 
 
---Cuales son los productos disponibles para la venta (activos) de la marca Phillips?
+--11) Cuales son los productos disponibles para la venta (activos) de la marca Phillips?
 select * from product_master 
 where is_active is true 
 and nombre like '%Phillips%'
 
---Obtener el monto vendido por tienda y moneda y ordenarlo de mayor a menor por valor nominal.
+--12) Obtener el monto vendido por tienda y moneda y ordenarlo de mayor a menor por valor nominal.
 select 
 	tienda, 
 	sum(venta) as monto_vendido 
@@ -121,7 +120,7 @@ from order_line_sale
 group by tienda 
 order by sum(venta) desc;
 
-/*Cual es el precio promedio de venta de cada producto en las distintas monedas? 
+/*13) Cual es el precio promedio de venta de cada producto en las distintas monedas? 
 Recorda que los valores de venta, impuesto, descuentos y creditos es por el total de la linea.*/
 
 select 
@@ -131,7 +130,7 @@ select
 from order_line_sale  
 group by producto, moneda  
 
---Cual es la tasa de impuestos que se pago por cada orden de venta?
+--14) Cual es la tasa de impuestos que se pago por cada orden de venta?
 select * from order_line_sale ols 
 select 
 	orden,
@@ -217,6 +216,9 @@ on ols.producto = pm.codigo_producto
 where material notnull 
 group by pm.codigo_producto, pm.material
 
+--8) Mostrar la tabla order_line_sales agregando una columna que represente el valor de venta bruta en cada linea convertido a dolares usando
+--la tabla de tipo de cambio.
+
 --9)Calcular cantidad de ventas totales de la empresa en dolares.
 select 	
 	ols.moneda,
@@ -225,6 +227,8 @@ from order_line_sale ols
 left join monthly_average_fx_rate mafr 
 on ols.fecha = mafr.mes 
 group by ols.moneda
+
+--10)Mostrar en la tabla de ventas el margen de venta por cada linea. Siendo margen = (venta - promociones) - costo expresado en dolares.
 
 --11)Calcular la cantidad de items distintos de cada subsubcategoria que se llevan por numero de orden.
 select 
@@ -273,7 +277,7 @@ update order_line_sale set line_key = concat(orden, producto);
 update order_line_sale set pos = null 
 where pos = 1; 
 
-/*Crear una tabla llamada "employees" (por el momento vacia) que tenga un id (creado de forma incremental), nombre,
+/*7) Crear una tabla llamada "employees" (por el momento vacia) que tenga un id (creado de forma incremental), nombre,
  apellido, fecha de entrada, fecha salida, telefono, pais, provincia, codigo_tienda, posicion. 
  Decidir cual es el tipo de dato mas acorde.*/
 create table employees
@@ -290,7 +294,7 @@ create table employees
 	posicion varchar(20)
 	
 )
---7- Insertar nuevos valores a la tabla "employees" para los siguientes 4 empleados:
+--8- Insertar nuevos valores a la tabla "employees" para los siguientes 4 empleados:
 	--Juan Perez, 2022-01-01, telefono +541113869867, Argentina, Santa Fe, tienda 2, Vendedor.
 	--Catalina Garcia, 2022-03-01, Argentina, Buenos Aires, tienda 2, Representante Comercial
 	--Ana Valdez, desde 2020-02-21 hasta 2022-03-01, España, Madrid, tienda 8, Jefe Logistica
@@ -300,12 +304,12 @@ insert into stg.employees values (2, 'Catalina', 'Garcia', '2022-03-01', null, n
 insert into stg.employees values (3, 'Ana', 'Valdez', '2020-02-21 ', '2022-03-01', null, 'España', 'Madrid', 8, 'Jefe Logistica');
 insert into stg.employees values (4, 'Fernando', 'Moralez', '2022-04-04', null, null, 'España', 'Valencia', 9, 'Vendedor');
 
-/* 8- Crear un backup de la tabla "cost" agregandole una columna que se llame "last_updated_ts" que sea el momento exacto 
+/* 9- Crear un backup de la tabla "cost" agregandole una columna que se llame "last_updated_ts" que sea el momento exacto 
 en el cual estemos realizando el backup en formato datetime. */
 select *, current_date as last_updated_ts
 into bkp.cost_19042023 
 from stg."cost" c;
 
---9 -El cambio en la tabla "order_line_sale" en el punto 6 fue un error y debemos volver la tabla a su estado original, como lo harias?
+--10 -El cambio en la tabla "order_line_sale" en el punto 6 fue un error y debemos volver la tabla a su estado original, como lo harias?
 update stg.order_line_sale set pos = 1 
 where pos isnull; 
