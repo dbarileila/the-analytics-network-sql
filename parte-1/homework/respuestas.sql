@@ -251,6 +251,41 @@ on ols.fecha = mafr.mes
 group by ols.moneda
 
 --10)Mostrar en la tabla de ventas el margen de venta por cada linea. Siendo margen = (venta - promociones) - costo expresado en dolares.
+with costo_dolares as (
+select 
+	extract(month from i.fecha) as mes,
+	i.sku, 
+	avg((i.inicial + i."final")/2 * c1.costo_promedio_usd) as cost_usd 
+	from stg.inventory i 
+	left join stg."cost" c1
+	on c1.codigo_producto = i.sku
+	group by i.sku, extract(month from i.fecha) 
+),
+venta_bruta_usd as (
+select 
+	producto, 
+	extract(month from ols.fecha) as mes,
+	sum(round (ols.venta/(case
+	when moneda = 'ARS' then mafr.cotizacion_usd_peso
+	when moneda = 'URU' then mafr.cotizacion_usd_uru
+	when moneda = 'EUR' then mafr.cotizacion_usd_peso
+	else 0 end),1)) as venta_bruta_usd
+from stg.order_line_sale ols
+left join stg.monthly_average_fx_rate mafr 
+	on extract(month from mafr.mes) = extract(month from ols.fecha) 
+	and extract(year from mafr.mes) = extract(year from ols.fecha) 
+	group by 1,2 
+)
+
+select 
+	ols.*,
+	vbu.producto,
+	(venta_bruta_usd - cost_usd) as margen
+from venta_bruta_usd vbu
+left join costo_dolares cd 
+on vbu.producto = cd.sku
+left join stg.order_line_sale ols 
+on ols.producto = vbu.producto
 
 --11)Calcular la cantidad de items distintos de cada subsubcategoria que se llevan por numero de orden.
 select 
